@@ -1,0 +1,311 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>A&R Brew Cafe � Sales Management</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+  <div id="screen-login" class="auth-overlay">
+    <div class="auth-card login-card">
+      <div class="login-badge">☕</div>
+      <h2>A&R Brew Cafe</h2>
+      <p class="auth-subtitle">Welcome back. Sign in to manage orders.</p>
+      <div class="input-group">
+        <label>Username</label>
+        <input type="text" id="login-user" class="input-field" placeholder="Enter username"
+          onkeyup="if(event.key==='Enter') handleLogin()">
+      </div>
+      <div class="input-group">
+        <label>Password</label>
+        <input type="password" id="login-pass" class="input-field" placeholder="Enter password"
+          onkeyup="if(event.key==='Enter') handleLogin()">
+      </div>
+      <div class="input-group">
+        <label>Role</label>
+        <select id="login-role" class="input-field">
+          <option value="admin">Manager</option>
+          <option value="cashier">Cashier</option>
+          <option value="barista">Barista</option>
+        </select>
+      </div>
+      <div id="login-error" class="error-msg" style="display:none;"></div>
+      <button class="btn-primary" onclick="handleLogin()">Sign In</button>
+      <p class="auth-note">admin/admin123 � cashier/cashier123 � barista/barista123</p>
+    </div>
+  </div>
+
+  <div id="main-app" class="app-shell" style="display:none;">
+    <header class="topbar">
+      <div class="brand-panel">
+        <div class="brand-icon">☕</div>
+        <div>
+          <div class="brand-title">A&R Brew Cafe</div>
+          <div class="brand-subtitle">Brewed with Love • Point of Sale</div>
+          <div id="dash-greeting" class="brand-greeting">Good Morning, Admin</div>
+        </div>
+      </div>
+      <div class="topnav">
+        <button class="tab-button active" id="nav-pos" onclick="switchPage('pos', this)">Cashier</button>
+        <button class="tab-button" id="nav-barista" onclick="switchPage('barista', this)">Barista</button>
+        <button class="tab-button" id="nav-inventory" onclick="switchPage('inventory', this)">Manager</button>
+        <button class="tab-button" id="nav-reports" onclick="switchPage('reports', this)">Analytics</button>
+      </div>
+      <div class="user-panel">
+        <span id="admin-name-display">ADMIN</span>
+        <button class="btn-signout" onclick="handleLogout()">Sign Out</button>
+      </div>
+    </header>
+
+    <main class="app-content">
+      <section id="pos" class="page-section active">
+        <div class="page-header card-panel">
+          <div>
+            <div class="page-label">Menu Selection</div>
+            <h1>Cashier</h1>
+            <p>Select coffee and customize the order.</p>
+          </div>
+          <div class="page-actions">
+            <input type="text" id="pos-search" class="input-field search-input" placeholder="Search menu..."
+              oninput="renderPOSProducts()">
+            <div class="category-chips">
+              <button class="chip active" onclick="setPOSCategory('All', this)">All</button>
+              <button class="chip" onclick="setPOSCategory('Hot Drinks', this)">Hot Coffee</button>
+              <button class="chip" onclick="setPOSCategory('Iced Drinks', this)">Iced Coffee</button>
+              <button class="chip" onclick="setPOSCategory('Pastries', this)">Pastries</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="pos-grid">
+          <div class="menu-panel card-panel">
+            <div id="pos-product-grid" class="product-grid"></div>
+          </div>
+          <aside class="receipt-panel card-panel">
+            <div class="receipt-header">
+              <div>
+                <div class="receipt-title" style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
+                  Order Receipt
+                  <span id="cart-count" style="font-size: 0.85rem; font-weight: 600; color: var(--accent); background: #f4efe7; padding: 4px 10px; border-radius: 12px;">0 items</span>
+                </div>
+                <div class="receipt-subtitle">Thank you for your order!</div>
+              </div>
+            </div>
+            <div id="cart-items" class="receipt-body">
+              <div class="receipt-empty" id="cart-empty-msg">
+                <span class="receipt-empty-icon">🛒</span>
+                <p>No items in cart</p>
+                <p>Select items from menu</p>
+              </div>
+            </div>
+            <div class="receipt-summary">
+              <div class="summary-row"><span>Subtotal</span><span id="cart-subtotal">₱0.00</span></div>
+              <div class="summary-row"><span>Discount</span><span id="cart-discount">₱0.00</span></div>
+              <div class="summary-row total-row"><span>Total</span><span id="cart-total">₱0.00</span></div>
+            </div>
+            <div class="receipt-actions">
+              <label>Payment</label>
+              <select id="payment-method" class="input-field" onchange="updateChange()">
+                <option value="cash">Cash</option>
+                <option value="gcash">GCash</option>
+                <option value="maya">Maya</option>
+              </select>
+              <label>Cash Tendered</label>
+              <input type="number" id="cash-tendered" class="input-field" placeholder="0.00" min="0"
+                oninput="updateChange()">
+              <div class="summary-row"><span>Change</span><span id="cart-change">₱0.00</span></div>
+              <button class="btn-primary btn-block" onclick="processCheckout()">Pay Now</button>
+            </div>
+          </aside>
+        </div>
+      </section>
+
+      <section id="barista" class="page-section">
+        <div class="page-header card-panel">
+          <div>
+            <div class="page-label">Barista Station</div>
+            <h1>Prepare and serve customer orders</h1>
+          </div>
+          <div class="top-metrics">
+            <div class="metric-card warning"><span>Pending Orders</span><strong id="barista-pending-count">0</strong>
+            </div>
+            <div class="metric-card success"><span>Completed Today</span><strong id="barista-served-count">0</strong>
+            </div>
+          </div>
+        </div>
+        <div class="barista-panel">
+          <div class="orders-card">
+            <div class="orders-title">Pending Orders</div>
+            <div id="pending-orders-list" class="orders-list">No pending orders</div>
+          </div>
+          <div class="orders-card">
+            <div class="orders-title">Completed Orders</div>
+            <div id="served-orders-list" class="orders-list">No completed orders yet</div>
+          </div>
+        </div>
+      </section>
+
+      <section id="inventory" class="page-section">
+        <div class="page-header card-panel">
+          <div>
+            <div class="page-label">Stock Preparation</div>
+            <h1>Inventory Management</h1>
+            <p>Manage menu items, prices, and stock levels.</p>
+          </div>
+          <button class="btn-primary" onclick="openAddProductModal()">+ Add New Product</button>
+        </div>
+        <div class="inventory-filters card-panel">
+          <input type="text" id="inv-search" class="input-field" placeholder="Search menu items..."
+            oninput="renderInventory()">
+          <select id="inv-filter-cat" class="input-field" onchange="renderInventory()">
+            <option value="All">All Categories</option>
+            <option value="Hot Drinks">Hot Drinks</option>
+            <option value="Iced Drinks">Iced Drinks</option>
+            <option value="Food">Food</option>
+            <option value="Pastries">Pastries</option>
+          </select>
+          <select id="inv-filter-stock" class="input-field" onchange="renderInventory()">
+            <option value="All">All Stock</option>
+            <option value="In Stock">In Stock</option>
+            <option value="Low Stock">Low Stock (≤10)</option>
+            <option value="Out of Stock">Out of Stock</option>
+          </select>
+        </div>
+        <div class="alert-card warning-card" id="low-stock-alert" style="display:none;"></div>
+        <div class="inventory-table card-panel">
+          <div class="table-row table-header">
+            <div>Item</div>
+            <div>Category</div>
+            <div>Price</div>
+            <div>Stock</div>
+            <div>Status</div>
+            <div>Actions</div>
+          </div>
+          <div id="inventory-body"></div>
+        </div>
+      </section>
+
+      <section id="reports" class="page-section">
+        <div class="page-header card-panel">
+          <div>
+            <div class="page-label">Analytics & Reporting</div>
+            <h1>Performance Dashboard</h1>
+            <p>Track sales, inventory, and top products.</p>
+          </div>
+          <button class="btn-secondary" onclick="window.print()">Print Report</button>
+        </div>
+        <div class="report-grid">
+          <div class="report-card success"><span>Total Sales Today</span><strong
+              id="rep-sales-today">₱0.00</strong><small id="rep-sales-count">0 orders</small></div>
+          <div class="report-card blue"><span>Total Revenue</span><strong id="rep-total-revenue">₱0.00</strong><small>0
+              total orders</small></div>
+          <div class="report-card purple"><span>Avg. Order Value</span><strong
+              id="rep-avg-sale">₱0.00</strong><small>Per transaction</small></div>
+          <div class="report-card warning"><span>Stock Alerts</span><strong id="rep-stock-alerts">0</strong><small>low
+              stock items</small></div>
+        </div>
+        <div class="dashboard-grid">
+          <div class="chart-card">
+            <h3>Sales Trend (Last 7 days)</h3><canvas id="revenueTimeChart"></canvas>
+          </div>
+          <div class="chart-card">
+            <h3>Most Popular Coffee</h3><canvas id="categoryChart"></canvas>
+          </div>
+        </div>
+        <div class="best-seller-card card-panel">
+          <div class="card-title">Low Stock Alerts</div>
+          <div id="low-stock-list" class="low-stock-list">No low stock issues</div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <div id="modifiers-section" class="modal-overlay" style="display:none;">
+    <div class="modal-box">
+      <div class="modal-header">
+        <h3>Customize Order</h3>
+        <button class="modal-close" onclick="document.getElementById('modifiers-section').style.display='none'">×</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-grid" style="display: flex; flex-direction: column; gap: 16px;">
+          <div class="input-group full-width">
+            <label>Size</label>
+            <div id="size-options" style="display:flex; gap:10px; flex-wrap:wrap;"></div>
+          </div>
+          <div class="input-group full-width">
+            <label>Sugar Level</label>
+            <select id="sugar-level" class="input-field">
+              <option value="No Sugar">No Sugar (0%)</option>
+              <option value="Less Sugar">Less Sugar (50%)</option>
+              <option value="Normal Sugar" selected>Normal Sugar (100%)</option>
+              <option value="Extra Sugar">Extra Sugar (150%)</option>
+            </select>
+          </div>
+          <div class="input-group full-width">
+            <label>Add-ons</label>
+            <div id="addons-options" style="display:flex; gap:10px; flex-wrap:wrap;"></div>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn-ghost" onclick="document.getElementById('modifiers-section').style.display='none'">Cancel</button>
+        <button class="btn-primary" onclick="addToCart(); document.getElementById('modifiers-section').style.display='none'">Add to Order</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="modal-product" class="modal-overlay" style="display:none;">
+    <div class="modal-box">
+      <div class="modal-header">
+        <h3 id="modal-product-title">Add New Product</h3>
+        <button class="modal-close" onclick="closeProductModal()">?</button>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" id="edit-product-id">
+        <div class="form-grid">
+          <div class="input-group"><label>Item Name</label><input type="text" id="prod-name" class="input-field"
+              placeholder="e.g. Iced Americano"></div>
+          <div class="input-group"><label>Category</label><select id="prod-category" class="input-field">
+              <option value="Hot Drinks">Hot Drinks</option>
+              <option value="Iced Drinks">Iced Drinks</option>
+              <option value="Food">Food</option>
+              <option value="Pastries">Pastries</option>
+            </select></div>
+          <div class="input-group"><label>Price</label><input type="number" id="prod-price" class="input-field"
+              placeholder="0.00" min="0" step="0.01"></div>
+          <div class="input-group"><label>Cost</label><input type="number" id="prod-cost" class="input-field"
+              placeholder="0.00" min="0" step="0.01"></div>
+          <div class="input-group"><label>Stock (cups)</label><input type="number" id="prod-stock" class="input-field"
+              placeholder="0" min="0"></div>
+          <div class="input-group"><label>Low Stock Alert</label><input type="number" id="prod-threshold"
+              class="input-field" placeholder="10" min="0" value="10"></div>
+          <div class="input-group full-width"><label>Description</label><textarea id="prod-desc" class="input-field"
+              rows="3" placeholder="Optional"></textarea></div>
+        </div>
+      </div>
+      <div class="modal-footer"><button class="btn-ghost" onclick="closeProductModal()">Cancel</button><button
+          class="btn-primary" onclick="saveProduct()">Save Item</button></div>
+    </div>
+  </div>
+
+  <div id="modal-receipt" class="modal-overlay" style="display:none;">
+    <div class="modal-box receipt-box">
+      <div class="receipt-header">
+        <div class="receipt-brand">☕ A&R Brew Cafe</div>
+        <div class="receipt-sub">Coffee Shop Receipt</div>
+      </div>
+      <div id="receipt-content" class="receipt-content"></div>
+      <div class="receipt-actions"><button class="btn-ghost" onclick="closeReceiptModal()">Close</button><button
+          class="btn-primary" onclick="printReceipt()">Print Receipt</button></div>
+    </div>
+  </div>
+
+  <div id="toast" class="toast"></div>
+  <script src="script.js"></script>
+</body>
+
+</html>
